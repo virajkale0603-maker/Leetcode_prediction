@@ -5,14 +5,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 # --- 1. LOAD DATA & CLEAN NON-NUMERIC COLUMNS ---
 @st.cache_data
 def load_data():
-    # Load raw data to keep titles for display
+    # Load raw data to keep titles, URLs, and topics for display
     df_raw = pd.read_csv("all-leetcode-questions.csv")
     
     # Create a working copy for numerical/boolean features
     df_numeric = df_raw.copy()
     
-    # Drop known text or percentage columns explicitly if they exist
-    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance']
+    # Drop known text/metadata columns from the similarity matrix calculation
+    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance', 'Topics', 'Tags']
     for col in columns_to_remove:
         if col in df_numeric.columns:
             df_numeric = df_numeric.drop(columns=[col])
@@ -63,7 +63,21 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         title = df_r.iloc[i]['Title']
         if i == idx or title in solved_list:
             continue
-        recommendations.append({"Sr. No.": i, "Title": title})
+            
+        # Safely extract URL and Topics/Tags if columns exist
+        url = df_r.iloc[i]['URL'] if 'URL' in df_r.columns else "#"
+        topics = (
+            df_r.iloc[i]['Topics'] if 'Topics' in df_r.columns 
+            else (df_r.iloc[i]['Tags'] if 'Tags' in df_r.columns else "N/A")
+        )
+        
+        recommendations.append({
+            "Sr. No.": i, 
+            "Title": title, 
+            "URL": url,
+            "Topics": topics
+        })
+        
         if len(recommendations) == top_n:
             break
             
@@ -73,7 +87,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
 st.set_page_config(page_title="LeetCode Recommender", page_icon="💡", layout="centered")
 
 st.title("💡 LeetCode Smart Problem Recommender")
-st.write("Select a problem you've practiced, track what you've solved, and get 4–5 algorithmically similar questions!")
+st.write("Select a problem you've practiced, track what you've solved, and get algorithmically similar questions with direct links!")
 
 # Sidebar for tracking solved questions
 st.sidebar.header("📊 Track Progress")
@@ -92,7 +106,8 @@ user_query = st.selectbox(
     options=["-- Select a Question --"] + all_titles
 )
 
-top_n_choice = st.slider("Number of recommendations:", min_value=4, max_value=5, value=5)
+# Flexible slider allowing anywhere from 1 to 15 recommendations
+top_n_choice = st.slider("Number of recommendations:", min_value=1, max_value=15, value=5)
 
 if st.button("Get Recommendations 🚀", type="primary"):
     if user_query == "-- Select a Question --":
@@ -115,4 +130,12 @@ if st.button("Get Recommendations 🚀", type="primary"):
             
             st.markdown("### Recommended Next Practice Problems:")
             for i, rec in enumerate(recs, 1):
-                st.markdown(f"**{i}. [Sr. No. {rec['Sr. No.']}] {rec['Title']}**")
+                with st.container():
+                    st.markdown(
+                        f"""
+                        **{i}. [{rec['Title']}]({rec['URL']})**  
+                        *Sr. No.:* `{rec['Sr. No.']}` | *Topics:* {rec['Topics']}
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    st.divider()
