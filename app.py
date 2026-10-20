@@ -64,11 +64,18 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         if i == idx or title in solved_list:
             continue
             
-        # Safely extract URL and Topics/Tags if columns exist
-        url = df_r.iloc[i]['URL'] if 'URL' in df_r.columns else "#"
+        # Safely extract and format URL so it points to LeetCode directly
+        raw_url = str(df_r.iloc[i]['URL']) if 'URL' in df_r.columns and pd.notna(df_r.iloc[i]['URL']) else "#"
+        if raw_url.startswith('/'):
+            url = f"https://leetcode.com{raw_url}"
+        elif not raw_url.startswith('http'):
+            url = f"https://leetcode.com/{raw_url}"
+        else:
+            url = raw_url
+            
         topics = (
-            df_r.iloc[i]['Topics'] if 'Topics' in df_r.columns 
-            else (df_r.iloc[i]['Tags'] if 'Tags' in df_r.columns else "N/A")
+            df_r.iloc[i]['Topics'] if 'Topics' in df_r.columns and pd.notna(df_r.iloc[i]['Topics'])
+            else (df_r.iloc[i]['Tags'] if 'Tags' in df_r.columns and pd.notna(df_r.iloc[i]['Tags']) else "N/A")
         )
         
         recommendations.append({
@@ -87,7 +94,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
 st.set_page_config(page_title="LeetCode Recommender", page_icon="💡", layout="centered")
 
 st.title("💡 LeetCode Smart Problem Recommender")
-st.write("Select a problem you've practiced, track what you've solved, and get algorithmically similar questions with direct links!")
+st.write("Select a problem you've practiced, track what you've solved, and get algorithmically similar questions with direct LeetCode links!")
 
 # Sidebar for tracking solved questions
 st.sidebar.header("📊 Track Progress")
@@ -131,7 +138,7 @@ if st.button("Get Recommendations 🚀", type="primary"):
             st.markdown("### Recommended Next Practice Problems:")
             for i, rec in enumerate(recs, 1):
                 with st.container():
-                    # Using HTML target='_blank' to open the link cleanly in a new tab
+                    # HTML target='_blank' opens LeetCode in a new tab without reloading the app
                     st.markdown(
                         f"""
                         **{i}.** <a href="{rec['URL']}" target="_blank" style="text-decoration: none; font-weight: bold;">{rec['Title']} ↗</a>  
