@@ -12,13 +12,19 @@ def load_data():
     df_numeric = df_raw.copy()
     
     # Drop known text/metadata columns from the similarity matrix calculation
-    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance', 'Topics', 'Tags']
+    # We dynamically protect topic/tag columns so they aren't accidentally dropped if named differently
+    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance']
     for col in columns_to_remove:
         if col in df_numeric.columns:
             df_numeric = df_numeric.drop(columns=[col])
             
     # Force convert ALL remaining columns to numbers (strips '%' signs, turns text to 0)
     for col in df_numeric.columns:
+        # Avoid trying to convert topic/tag text columns into numbers
+        col_lower = col.lower()
+        if 'topic' in col_lower or 'tag' in col_lower or 'category' in col_lower:
+            continue
+            
         df_numeric[col] = (
             df_numeric[col]
             .astype(str)
@@ -32,6 +38,14 @@ def load_data():
 df_raw, df_cleaned = load_data()
 all_titles = df_raw['Title'].tolist()
 features = list(df_cleaned.columns)
+
+# Automatically find the column name that contains topics or tags
+topic_column = None
+for col in df_raw.columns:
+    col_lower = col.lower()
+    if 'topic' in col_lower or 'tag' in col_lower or 'category' in col_lower:
+        topic_column = col
+        break
 
 # --- 2. RECOMMENDATION FUNCTION ---
 def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, top_n=5):
@@ -64,11 +78,12 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         if i == idx or title in solved_list:
             continue
             
-        # Safely extract Topics/Tags if columns exist
-        topics = (
-            df_r.iloc[i]['Topics'] if 'Topics' in df_r.columns and pd.notna(df_r.iloc[i]['Topics'])
-            else (df_r.iloc[i]['Tags'] if 'Tags' in df_r.columns and pd.notna(df_r.iloc[i]['Tags']) else "N/A")
-        )
+        # Extract topics dynamically using the detected column name
+        topics = "N/A"
+        if topic_column and topic_column in df_r.columns:
+            val = df_r.iloc[i][topic_column]
+            if pd.notna(val) and str(val).strip() != "":
+                topics = str(val)
         
         recommendations.append({
             "Sr. No.": i, 
