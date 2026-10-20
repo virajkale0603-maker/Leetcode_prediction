@@ -5,26 +5,20 @@ from sklearn.metrics.pairwise import cosine_similarity
 # --- 1. LOAD DATA & CLEAN NON-NUMERIC COLUMNS ---
 @st.cache_data
 def load_data():
-    # Load raw data to keep titles and topics for display
+    # Load raw data to keep titles for display
     df_raw = pd.read_csv("all-leetcode-questions.csv")
     
     # Create a working copy for numerical/boolean features
     df_numeric = df_raw.copy()
     
-    # Drop known text/metadata columns from the similarity matrix calculation
-    # We dynamically protect topic/tag columns so they aren't accidentally dropped if named differently
-    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance']
+    # Drop known text or metadata columns explicitly if they exist
+    columns_to_remove = ['Title', 'URL', 'Description', 'Acceptance Rate', 'Difficulty', 'Acceptance', 'Topics', 'Tags']
     for col in columns_to_remove:
         if col in df_numeric.columns:
             df_numeric = df_numeric.drop(columns=[col])
             
     # Force convert ALL remaining columns to numbers (strips '%' signs, turns text to 0)
     for col in df_numeric.columns:
-        # Avoid trying to convert topic/tag text columns into numbers
-        col_lower = col.lower()
-        if 'topic' in col_lower or 'tag' in col_lower or 'category' in col_lower:
-            continue
-            
         df_numeric[col] = (
             df_numeric[col]
             .astype(str)
@@ -38,14 +32,6 @@ def load_data():
 df_raw, df_cleaned = load_data()
 all_titles = df_raw['Title'].tolist()
 features = list(df_cleaned.columns)
-
-# Automatically find the column name that contains topics or tags
-topic_column = None
-for col in df_raw.columns:
-    col_lower = col.lower()
-    if 'topic' in col_lower or 'tag' in col_lower or 'category' in col_lower:
-        topic_column = col
-        break
 
 # --- 2. RECOMMENDATION FUNCTION ---
 def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, top_n=5):
@@ -78,18 +64,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         if i == idx or title in solved_list:
             continue
             
-        # Extract topics dynamically using the detected column name
-        topics = "N/A"
-        if topic_column and topic_column in df_r.columns:
-            val = df_r.iloc[i][topic_column]
-            if pd.notna(val) and str(val).strip() != "":
-                topics = str(val)
-        
-        recommendations.append({
-            "Sr. No.": i, 
-            "Title": title,
-            "Topics": topics
-        })
+        recommendations.append({"Sr. No.": i, "Title": title})
         
         if len(recommendations) == top_n:
             break
@@ -147,7 +122,7 @@ if st.button("Get Recommendations 🚀", type="primary"):
                     st.markdown(
                         f"""
                         **{i}. {rec['Title']}**  
-                        *Sr. No.:* `{rec['Sr. No.']}` | *Topics:* {rec['Topics']}
+                        *Sr. No.:* `{rec['Sr. No.']}`
                         """
                     )
                     st.divider()
