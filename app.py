@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # --- 1. LOAD DATA & CLEAN NON-NUMERIC COLUMNS ---
 @st.cache_data
 def load_data():
-    # Load raw data to keep titles, URLs, and topics for display
+    # Load raw data to keep titles and topics for display
     df_raw = pd.read_csv("all-leetcode-questions.csv")
     
     # Create a working copy for numerical/boolean features
@@ -64,15 +64,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         if i == idx or title in solved_list:
             continue
             
-        # Safely extract and format URL so it points to LeetCode directly
-        raw_url = str(df_r.iloc[i]['URL']) if 'URL' in df_r.columns and pd.notna(df_r.iloc[i]['URL']) else "#"
-        if raw_url.startswith('/'):
-            url = f"https://leetcode.com{raw_url}"
-        elif not raw_url.startswith('http'):
-            url = f"https://leetcode.com/{raw_url}"
-        else:
-            url = raw_url
-            
+        # Safely extract Topics/Tags if columns exist
         topics = (
             df_r.iloc[i]['Topics'] if 'Topics' in df_r.columns and pd.notna(df_r.iloc[i]['Topics'])
             else (df_r.iloc[i]['Tags'] if 'Tags' in df_r.columns and pd.notna(df_r.iloc[i]['Tags']) else "N/A")
@@ -80,8 +72,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
         
         recommendations.append({
             "Sr. No.": i, 
-            "Title": title, 
-            "URL": url,
+            "Title": title,
             "Topics": topics
         })
         
@@ -94,7 +85,7 @@ def recommend_questions(user_input, df_r, df_c, feature_cols, solved_list=None, 
 st.set_page_config(page_title="LeetCode Recommender", page_icon="💡", layout="centered")
 
 st.title("💡 LeetCode Smart Problem Recommender")
-st.write("Select a problem you've practiced, track what you've solved, and get algorithmically similar questions with direct LeetCode links!")
+st.write("Select a problem you've practiced, track what you've solved, and get algorithmically similar questions!")
 
 # Sidebar for tracking solved questions
 st.sidebar.header("📊 Track Progress")
@@ -138,12 +129,10 @@ if st.button("Get Recommendations 🚀", type="primary"):
             st.markdown("### Recommended Next Practice Problems:")
             for i, rec in enumerate(recs, 1):
                 with st.container():
-                    # HTML target='_blank' opens LeetCode in a new tab without reloading the app
                     st.markdown(
                         f"""
-                        **{i}.** <a href="{rec['URL']}" target="_blank" style="text-decoration: none; font-weight: bold;">{rec['Title']} ↗</a>  
+                        **{i}. {rec['Title']}**  
                         *Sr. No.:* `{rec['Sr. No.']}` | *Topics:* {rec['Topics']}
-                        """,
-                        unsafe_allow_html=True
+                        """
                     )
                     st.divider()
