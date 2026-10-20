@@ -106,8 +106,8 @@ user_query = st.selectbox(
     options=["-- Select a Question --"] + all_titles
 )
 
-# Flexible slider allowing anywhere from 1 to 15 recommendations
-top_n_choice = st.slider("Number of recommendations:", min_value=1, max_value=15, value=5)
+# Slider restricted from 1 to 5 recommendations
+top_n_choice = st.slider("Number of recommendations:", min_value=1, max_value=5, value=5)
 
 if st.button("Get Recommendations 🚀", type="primary"):
     if user_query == "-- Select a Question --":
