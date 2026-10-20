@@ -131,9 +131,10 @@ if st.button("Get Recommendations 🚀", type="primary"):
             st.markdown("### Recommended Next Practice Problems:")
             for i, rec in enumerate(recs, 1):
                 with st.container():
+                    # Using HTML target='_blank' to open the link cleanly in a new tab
                     st.markdown(
                         f"""
-                        **{i}. [{rec['Title']}]({rec['URL']})**  
+                        **{i}.** <a href="{rec['URL']}" target="_blank" style="text-decoration: none; font-weight: bold;">{rec['Title']} ↗</a>  
                         *Sr. No.:* `{rec['Sr. No.']}` | *Topics:* {rec['Topics']}
                         """,
                         unsafe_allow_html=True
